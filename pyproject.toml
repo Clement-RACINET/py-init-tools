@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "py-init-tools"
-version = "0.2.0"
+version = "0.2.1"
 description = "Safe audit and generation of Python package __init__.py files."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -83,7 +83,7 @@ exclude = [
 package_roots = ["src/py_init_tools"]
 test_roots = ["tests"]
 
-package_version = "0.2.0"
+package_version = "0.2.1"
 package_description = "Python __init__.py management tools."
 
 generate_root_reexports = false

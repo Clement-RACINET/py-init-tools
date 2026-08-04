@@ -21,6 +21,8 @@ from py_init_tools.generator import (
     generate_package_files_for_root,
     generate_test_files,
     render_init_file,
+    ruff_all_name_sort_key,
+    ruff_import_name_sort_key,
 )
 
 if TYPE_CHECKING:
@@ -108,6 +110,46 @@ def test_dedupe_import_entries_removes_duplicate_public_names() -> None:
         (".c", ["Gamma"]),
     ]
 
+def test_ruff_all_name_sort_key_matches_expected_grouping() -> None:
+    """Sort __all__ names with Ruff-compatible grouping."""
+    names = [
+        "write_trajectory",
+        "DEFAULT_TASK",
+        "InvalidReadConfs",
+        "InvalidRWSResponse",
+        "read_trajectory",
+        "API_VERSION",
+    ]
+
+    assert sorted(names, key=ruff_all_name_sort_key) == [
+        "API_VERSION",
+        "DEFAULT_TASK",
+        "InvalidRWSResponse",
+        "InvalidReadConfs",
+        "read_trajectory",
+        "write_trajectory",
+    ]
+
+
+def test_ruff_import_name_sort_key_matches_expected_grouping() -> None:
+    """Sort import members with Ruff/isort-compatible grouping."""
+    names = [
+        "write_trajectory",
+        "DEFAULT_TASK",
+        "InvalidReadConfs",
+        "InvalidRWSResponse",
+        "read_trajectory",
+        "API_VERSION",
+    ]
+
+    assert sorted(names, key=ruff_import_name_sort_key) == [
+        "API_VERSION",
+        "DEFAULT_TASK",
+        "InvalidReadConfs",
+        "InvalidRWSResponse",
+        "read_trajectory",
+        "write_trajectory",
+    ]
 
 def test_format_import_returns_empty_for_no_names() -> None:
     """Return an empty import for empty names."""
@@ -147,9 +189,20 @@ def test_format_all_returns_empty_for_no_names() -> None:
 
 def test_format_all_sorts_and_deduplicates_names() -> None:
     """Sort and deduplicate __all__ names."""
-    assert format_all(["Beta", "Alpha", "Beta"]) == """\
-"Alpha",
-    "Beta","""
+    assert format_all(
+        [
+            "public_function",
+            "DEFAULT_VALUE",
+            "Beta",
+            "Alpha",
+            "Beta",
+        ]
+    ) == """\
+"DEFAULT_VALUE",
+    "Alpha",
+    "Beta",
+    "public_function","""
+
 
 
 def test_entries_to_imports_and_all_formats_entries() -> None:
@@ -205,6 +258,39 @@ __all__ = [
 
 __version__ = "1.2.3"
 '''
+
+def test_entries_to_imports_and_all_uses_ruff_compatible_sorting() -> None:
+    """Use Ruff-compatible sorting for imports and __all__."""
+    imports_block, all_names = entries_to_imports_and_all(
+        [
+            (
+                ".api",
+                [
+                    "write_trajectory",
+                    "DEFAULT_TASK",
+                    "InvalidReadConfs",
+                    "InvalidRWSResponse",
+                    "read_trajectory",
+                ],
+            ),
+        ]
+    )
+
+    assert imports_block == """\
+from .api import (
+    DEFAULT_TASK,
+    InvalidReadConfs,
+    InvalidRWSResponse,
+    read_trajectory,
+    write_trajectory,
+)"""
+    assert format_all(all_names) == """\
+"DEFAULT_TASK",
+    "InvalidRWSResponse",
+    "InvalidReadConfs",
+    "read_trajectory",
+    "write_trajectory","""
+
 
 
 def test_gen_lightweight_root_init_without_version(tmp_path: Path) -> None:

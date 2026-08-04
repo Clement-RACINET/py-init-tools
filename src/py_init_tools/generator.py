@@ -27,6 +27,36 @@ if TYPE_CHECKING:
 
 MAX_SINGLE_LINE_IMPORT_LENGTH = 88
 
+def ruff_all_name_sort_key(name: str) -> tuple[int, str]:
+    """Return a Ruff-compatible sort key for __all__ names.
+
+    Ruff RUF022 groups names broadly as constants, classes, then functions or
+    lowercase names, while preserving case-sensitive ordering inside groups.
+    """
+    if name.upper() == name:
+        group = 0
+    elif name[:1].islower():
+        group = 2
+    else:
+        group = 1
+
+    return group, name
+
+
+def ruff_import_name_sort_key(name: str) -> tuple[int, str]:
+    """Return a Ruff/isort-compatible sort key for imported names.
+
+    Import member sorting groups names similarly to __all__, but sorts
+    case-insensitively inside each group.
+    """
+    if name.upper() == name:
+        group = 0
+    elif name[:1].islower():
+        group = 2
+    else:
+        group = 1
+
+    return group, name.lower()
 
 @dataclass(frozen=True, slots=True)
 class InitRenderSpec:
@@ -62,7 +92,7 @@ def format_import(module: str, names: list[str]) -> str:
     if not names:
         return ""
 
-    sorted_names = sorted(names)
+    sorted_names = sorted(names, key=ruff_import_name_sort_key)
     single_line = f"from {module} import {', '.join(sorted_names)}"
 
     if len(single_line) <= MAX_SINGLE_LINE_IMPORT_LENGTH:
@@ -77,7 +107,7 @@ def format_import(module: str, names: list[str]) -> str:
 
 def format_all(names: list[str]) -> str:
     """Format names for __all__."""
-    unique_names = sorted(set(names))
+    unique_names = sorted(set(names), key=ruff_all_name_sort_key)
 
     if not unique_names:
         return ""

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project follows the spirit of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses semantic versioning while the public API stabilizes.
 
+## [0.2.1] - 2026-08-04
+
+### Added
+
+- Add Ruff-compatible sorting for generated import members and `__all__` names.
+- Add tests for Ruff-compatible sorting of generated imports and `__all__`.
+
 ## [0.2.0] - 2026-08-04
 
 ### Added

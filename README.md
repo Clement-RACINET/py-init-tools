@@ -122,7 +122,7 @@ pyinit --package-root src/my_package --check --ignore-manual-in-check
 package_roots = ["src/my_package"]
 test_roots = ["tests"]
 
-package_version = "0.2.0"
+package_version = "0.2.1"
 package_description = "My Python package."
 
 generate_root_reexports = false
@@ -371,7 +371,7 @@ If `package_version` is configured, the root package also contains
 `__version__`:
 
 ```python
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 ```
 
 ---
