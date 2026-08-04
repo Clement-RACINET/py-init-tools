@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 This project follows the spirit of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses semantic versioning while the public API stabilizes.
 
+## [0.2.0] - 2026-08-04
+
+### Added
+
+- Add comprehensive Pytest coverage for the command-line interface.
+- Add tests for CLI parsing, dry-run mode, write mode, check mode, skipped test generation, and manual-file skip reporting.
+- Add configuration loading tests for defaults, `pyproject.toml` values, CLI root overrides, and invalid value handling.
+- Add filesystem and AST discovery tests.
+- Add tests for public symbol discovery modes:
+  - `explicit_all`
+  - `classes_functions`
+  - `all_public`
+- Add tests for generated `__init__.py` rendering.
+- Add tests for lightweight initializers, root package initializers, allowlisted re-export initializers, and test package markers.
+- Add tests for file writing and checking helpers.
+- Add tests for manual-file protection, dry-run output, unchanged files, updated files, missing files, outdated files, and generated marker detection.
+- Add targeted coverage configuration for `py_init_tools`.
+
 ## [0.1.0] - 2026-08-04
 
 ### Added
@@ -34,9 +52,3 @@ and uses semantic versioning while the public API stabilizes.
 - Add Ruff configuration for linting and formatting.
 - Add BasedPyright configuration for strict typing.
 - Add Pytest-based test setup.
-
-### Changed
-
-
-### Fixed
-

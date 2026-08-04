@@ -89,9 +89,12 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def parse_args(parser: argparse.ArgumentParser) -> CliArgs:
+def parse_args(
+    parser: argparse.ArgumentParser,
+    argv: list[str] | None = None,
+) -> CliArgs:
     """Parse and type command-line arguments."""
-    return cast("CliArgs", parser.parse_args())
+    return cast("CliArgs", parser.parse_args(argv))
 
 
 def main() -> None:

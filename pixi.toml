@@ -11,6 +11,7 @@ py-init-tools = { path = ".", editable = true }
 ruff = ">=0.16.1,<0.17"
 basedpyright = ">=1.39.9,<2"
 pytest = ">=9.1.1,<10"
+pytest-cov = ">=7.1.0, <8"
 hatchling = ">=1.25"
 
 [tasks]
