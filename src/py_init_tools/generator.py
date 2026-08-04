@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 MAX_SINGLE_LINE_IMPORT_LENGTH = 88
 
+
 def ruff_all_name_sort_key(name: str) -> tuple[int, str]:
     """Return a Ruff-compatible sort key for __all__ names.
 
@@ -205,7 +206,7 @@ def entries_to_imports_and_all(
     entries: list[tuple[str, list[str]]],
 ) -> tuple[str, list[str]]:
     """Convert import entries into an import block and __all__ names."""
-    deduped = dedupe_import_entries(entries)
+    deduped = sorted(dedupe_import_entries(entries), key=lambda entry: entry[0])
 
     import_blocks: list[str] = []
     all_names: list[str] = []
@@ -221,6 +222,7 @@ def entries_to_imports_and_all(
     imports_block = "\n".join(import_blocks) if import_blocks else "# No public symbols"
 
     return imports_block, all_names
+
 
 
 def gen_lightweight_init(

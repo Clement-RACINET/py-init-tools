@@ -481,8 +481,8 @@ packages:
   requires_python: '>=3.9'
 - pypi: ./
   name: py-init-tools
-  version: 0.2.1
-  sha256: b58712ede14cae3347066f729ed3b53a92cb0214e70351f14f23883cdce2d7dd
+  version: 0.2.2
+  sha256: e4e69ebfab17dcb402e52ac7b4d2667822a19073da3b48459f777dfbdef75e4d
   requires_python: '>=3.12'
   editable: true
 - pypi: https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl

@@ -220,6 +220,23 @@ from .b import Beta"""
     assert all_names == ["Alpha", "Beta"]
 
 
+def test_entries_to_imports_and_all_sorts_import_blocks_by_module() -> None:
+    """Sort import blocks by module name to match Ruff/isort."""
+    imports_block, all_names = entries_to_imports_and_all(
+        [
+            (".errors", ["TrajCenterError"]),
+            ("._utils", ["symbol"]),
+            (".constants", ["DEFAULT_TASK"]),
+        ]
+    )
+
+    assert imports_block == """\
+from ._utils import symbol
+from .constants import DEFAULT_TASK
+from .errors import TrajCenterError"""
+    assert set(all_names) == {"symbol", "DEFAULT_TASK", "TrajCenterError"}
+
+
 def test_entries_to_imports_and_all_uses_no_public_symbols_comment() -> None:
     """Use a comment when no import entries exist."""
     imports_block, all_names = entries_to_imports_and_all([])

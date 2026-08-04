@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 This project follows the spirit of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and uses semantic versioning while the public API stabilizes.
 
-## [0.2.1] - 2026-08-04
+## [0.2.2] - 2026-08-04
+
+### Fixed
+
+- Sort generated relative import blocks by module path to avoid Ruff `I001` in nested packages.
+
+### Added
+
+- Add regression tests for nested package import block ordering.
+
+## [0.2.2] - 2026-08-04
 
 ### Added
 
