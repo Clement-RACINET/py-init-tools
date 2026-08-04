@@ -1,0 +1,27 @@
+[workspace]
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64"]
+
+[dependencies]
+python = ">=3.12,<3.14"
+pip = "*"
+
+[pypi-dependencies]
+py-init-tools = { path = ".", editable = true }
+ruff = ">=0.16.1,<0.17"
+basedpyright = ">=1.39.9,<2"
+pytest = ">=9.1.1,<10"
+hatchling = ">=1.25"
+
+[tasks]
+ruff-check = "ruff check src tests"
+ruff-fix = "ruff check src tests --fix"
+ruff-format = "ruff format src tests"
+typecheck = "basedpyright"
+test = "pytest"
+
+check = { depends-on = ["ruff-check", "typecheck", "test"] }
+format = { depends-on = ["ruff-fix", "ruff-format"] }
+
+pyinit-help = "pyinit --help"
+build = "python -m hatchling build"
