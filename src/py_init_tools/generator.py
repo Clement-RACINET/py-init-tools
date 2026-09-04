@@ -59,6 +59,7 @@ def ruff_import_name_sort_key(name: str) -> tuple[int, str]:
 
     return group, name.lower()
 
+
 @dataclass(frozen=True, slots=True)
 class InitRenderSpec:
     """Specification used to render a generated __init__.py file."""
@@ -141,22 +142,6 @@ __all__ = [{formatted_all}]
 {version_block}'''
 
 
-
-def collect_dir_public_names(
-    cfg: InitToolConfig,
-    pkg_root: Path,
-    pkg_dir: Path,
-) -> list[str]:
-    """Collect public names from modules directly contained in a directory."""
-    all_names: list[str] = []
-
-    for py_file in module_files_in_dir(pkg_dir):
-        blocklist = blocklist_for_module(cfg, pkg_root, py_file)
-        all_names.extend(collect_public_names(cfg, pkg_root, py_file, blocklist))
-
-    return sorted(set(all_names))
-
-
 def entries_from_flat_package(
     cfg: InitToolConfig,
     pkg_root: Path,
@@ -175,6 +160,29 @@ def entries_from_flat_package(
     return entries
 
 
+def collect_generated_package_public_names(
+    cfg: InitToolConfig,
+    pkg_root: Path,
+    pkg_dir: Path,
+) -> list[str]:
+    """Collect public names that the generated package initializer exports."""
+    rel_key = relative_package_key(pkg_root, pkg_dir)
+
+    if not is_reexport_allowed(cfg, pkg_root, pkg_dir):
+        return []
+
+    is_forced_flat = rel_key in cfg.flat_subdirs
+
+    if has_immediate_subpackages(cfg, pkg_dir) and not is_forced_flat:
+        entries = entries_from_nested_package(cfg, pkg_root, pkg_dir)
+    else:
+        entries = entries_from_flat_package(cfg, pkg_root, pkg_dir)
+
+    _imports_block, all_names = entries_to_imports_and_all(entries)
+
+    return sorted(set(all_names))
+
+
 def entries_from_nested_package(
     cfg: InitToolConfig,
     pkg_root: Path,
@@ -184,10 +192,7 @@ def entries_from_nested_package(
     entries: list[tuple[str, list[str]]] = []
 
     for sub_dir in iter_immediate_package_dirs(cfg, pkg_dir):
-        if not is_reexport_allowed(cfg, pkg_root, sub_dir):
-            continue
-
-        names = collect_dir_public_names(cfg, pkg_root, sub_dir)
+        names = collect_generated_package_public_names(cfg, pkg_root, sub_dir)
 
         if names:
             entries.append((f".{sub_dir.name}", names))
@@ -222,7 +227,6 @@ def entries_to_imports_and_all(
     imports_block = "\n".join(import_blocks) if import_blocks else "# No public symbols"
 
     return imports_block, all_names
-
 
 
 def gen_lightweight_init(
