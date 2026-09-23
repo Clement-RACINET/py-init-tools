@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Clément RACINET
+
+SPDX-License-Identifier: X11
+-->
+
 # py-init-tools
 
 Safe audit and generation of Python package `__init__.py` files.

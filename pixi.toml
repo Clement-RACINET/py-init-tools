@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Clément RACINET
+#
+# SPDX-License-Identifier: X11
+
 [workspace]
 channels = ["conda-forge"]
 platforms = ["win-64", "linux-64"]
@@ -23,6 +27,7 @@ typecheck = "basedpyright"
 
 pytest = "pytest"
 
+reuse-annotate-all = """reuse annotate --copyright "Clément RACINET" --license "X11" --year "2026" --recursive --skip-unrecognised . """
 
 check = { depends-on = ["ruff-check", "typecheck", "test"] }
 format = { depends-on = ["ruff-fix", "ruff-format"] }

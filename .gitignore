@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Clément RACINET
+#
+# SPDX-License-Identifier: X11
+
 .pixi/
 .venv/
 __pycache__/

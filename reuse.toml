@@ -1,16 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Clément RACINET
+#
+# SPDX-License-Identifier: X11
+
 version = 1
 
 [[annotations]]
 path = [
   ".coveragerc",
+  ".coverage",
+  ".gitattributes",
   ".gitignore",
   ".gitlab-ci.yml",
   ".pre-commit-config.yaml",
   "README.md",
   "basedpyrightconfig.json",
   "pixi.lock",
+  "pixi.toml",
   "pyproject.toml",
+  "reuse.toml",
   "ruff.toml",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Clément RACINET"
+SPDX-License-Identifier = "X11"
+
+[[annotations]]
+path = [
+  ".vscode/settings.json",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Clément RACINET"
