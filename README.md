@@ -2,120 +2,104 @@
 
 Safe audit and generation of Python package `__init__.py` files.
 
-`py-init-tools` is a small development utility designed to safely create,
-update, and check generated Python package initializer files across projects.
+`py-init-tools` is a small development utility that creates, updates, and checks
+Python package initializers without importing the target project's code.
 
 It is conservative by default:
 
-- dry-run by default;
-- write only with `--write`;
-- check mode for CI with `--check`;
-- never overwrites manual files unless `--overwrite-manual` is passed;
-- updates only files containing a stable generated marker;
-- supports lightweight package initializers;
-- supports allowlisted public re-exports;
-- parses Python modules with `ast` and never imports target project code.
+- dry-run unless `--write` is passed;
+- manual files are not overwritten by default;
+- generated files are tracked through a versioned sentinel and a JSON registry;
+- public re-exports are enabled only for allowlisted packages;
+- Python modules are analyzed statically with `ast`.
 
 ---
 
 ## Features
 
-- Generate missing `__init__.py` files for package-like directories.
+- Generate missing package `__init__.py` files.
 - Generate lightweight initializers without eager imports.
-- Generate safe test package markers.
-- Generate public re-exports only for explicitly allowlisted packages.
-- Infer public symbols from static `__all__`, classes, and functions.
-- Optionally export public constants and type aliases.
-- Protect manually maintained `__init__.py` files.
-- Support project-level configuration through `pyproject.toml`.
-- Provide dry-run, write, and check modes.
-
----
-
-## Installation
-
-### From a local clone
-
-```bash
-pip install -e .
-```
-
-### From GitLab
-
-```bash
-pip install git+https://gitlab.com/dev-tools-cr/python/py-init-tools.git
-```
-
-### From GitLab over SSH
-
-```bash
-pip install git+ssh://git@gitlab.com/dev-tools-cr/python/py-init-tools.git
-```
+- Generate public re-exports for explicitly allowlisted packages.
+- Generate minimal test package markers.
+- Discover public classes, functions, constants, and type aliases.
+- Respect explicit static `__all__` declarations.
+- Protect manually maintained files.
+- Detect modified, outdated, deleted, or recreated generated files.
+- Track file versions, revisions, hashes, and generation history.
+- Configure projects through `pyproject.toml`.
 
 ---
 
 ## Usage
 
-### Show help
+### Preview changes
+
+Running `pyinit` without `--write` or `--check` performs a dry-run:
 
 ```bash
-pyinit --help
+pyinit
 ```
 
-### Dry-run
-
-By default, `pyinit` does not write anything.
+Paths can also be provided explicitly:
 
 ```bash
-pyinit --package-root src/my_package
+pyinit --package-root src/my_package --test-root tests
 ```
 
 ### Write generated files
 
 ```bash
-pyinit --package-root src/my_package --write
+pyinit --write
 ```
 
 ### Check generated files
 
-Useful for CI pipelines.
+This exits with a non-zero status when generated files are missing, modified,
+outdated, or inconsistent with the registry:
 
 ```bash
-pyinit --package-root src/my_package --check
+pyinit --check
 ```
 
-### Process tests too
-
-```bash
-pyinit --package-root src/my_package --test-root tests --write
-```
+It is suitable for CI pipelines.
 
 ### Skip test package markers
 
 ```bash
-pyinit --package-root src/my_package --skip-tests
+pyinit --write --skip-tests
 ```
 
-### Allow overwriting manual files
+### Overwrite manual or unrecognized files
 
-Use this only when you intentionally want to replace existing manual
-`__init__.py` files.
+Manual files are protected by default. To replace them intentionally:
 
 ```bash
-pyinit --package-root src/my_package --write --overwrite-manual
+pyinit --write --overwrite-manual
 ```
 
-### Ignore manual files in check mode
+Use this option for the first migration from an older marker-based version of
+`py-init-tools`.
+
+### Ignore manual files during checks
 
 ```bash
-pyinit --package-root src/my_package --check --ignore-manual-in-check
+pyinit --check --ignore-manual-in-check
+```
+
+This applies only to files without a generated sentinel. Invalid or inconsistent
+generated files still fail validation.
+
+### Show all options
+
+```bash
+pyinit --help
 ```
 
 ---
 
 ## Configuration
 
-`py-init-tools` can be configured from `pyproject.toml`.
+Projects can configure the tool in `pyproject.toml`:
 
 ```toml
 [tool.py-init-tools]
@@ -128,203 +112,123 @@ package_description = "My Python package."
 generate_root_reexports = false
 
 reexport_allowlist = [
-  "subpkg/api"
+  "api",
+  "services/public"
 ]
 
 discovery_mode = "classes_functions"
 export_constants = false
 export_type_aliases = false
+
+flat_subdirs = []
 ```
 
-Once configured, you can simply run:
+Once configured, commands can be kept short:
 
 ```bash
+pyinit
+pyinit --write
 pyinit --check
 ```
 
-or:
+Command-line `--package-root` and `--test-root` values override their
+corresponding configuration values.
 
-```bash
-pyinit --write
-```
+### Configuration reference
 
----
+| **Option**                | **Type**               | **Description**                                              |
+| ------------------------- | ---------------------- | ------------------------------------------------------------ |
+| `package_roots`           | `list[str]`            | Package roots to process.                                    |
+| `test_roots`              | `list[str]`            | Test roots where package markers are generated.              |
+| `package_version`         | `str \| null`          | Optional `__version__` written in root packages.             |
+| `package_description`     | `str`                  | Root package docstring description.                          |
+| `generated_marker`        | `str`                  | Human-readable notice included in generated files.           |
+| `generate_root_reexports` | `bool`                 | Enable public re-exports from root packages.                 |
+| `reexport_allowlist`      | `list[str]`            | Package-relative directories allowed to re-export symbols.   |
+| `discovery_mode`          | `str`                  | Symbol discovery mode.                                       |
+| `export_constants`        | `bool`                 | Export public constants in `all_public` mode.                |
+| `export_type_aliases`     | `bool`                 | Export public `TypeAlias` declarations in `all_public` mode. |
+| `flat_subdirs`            | `list[str]`            | Nested directories forced to behave as flat packages.        |
+| `private_names_by_dir`    | `dict[str, list[str]]` | Names excluded by package-relative directory.                |
+| `private_names_by_module` | `dict[str, list[str]]` | Names excluded by package-relative module.                   |
+| `ignored_dir_names`       | `list[str]`            | Directory names ignored during discovery.                    |
 
-## Configuration reference
-
-| Option                    |                   Type |                             Default | Description                                                         |
-| ------------------------- | ---------------------: | ----------------------------------: | ------------------------------------------------------------------- |
-| `package_roots`           |            `list[str]` |                           `["src"]` | Package roots to process.                                           |
-| `test_roots`              |            `list[str]` |                                `[]` | Test roots where package markers can be generated.                  |
-| `package_version`         |          `str \| null` |                              `null` | Optional version written in root package initializers.              |
-| `package_description`     |                  `str` |                 `"Python package."` | Root package docstring description.                                 |
-| `generated_marker`        |                  `str` | `"Auto-generated by py-init-tools"` | Marker used to identify generated files.                            |
-| `generate_root_reexports` |                 `bool` |                             `false` | Whether root packages can re-export discovered public symbols.      |
-| `reexport_allowlist`      |            `list[str]` |                                `[]` | Package-relative directories allowed to receive eager re-exports.   |
-| `discovery_mode`          |                  `str` |               `"classes_functions"` | Public symbol discovery strategy.                                   |
-| `export_constants`        |                 `bool` |                             `false` | Export public constants in `all_public` mode.                       |
-| `export_type_aliases`     |                 `bool` |                             `false` | Export public `TypeAlias` declarations in `all_public` mode.        |
-| `flat_subdirs`            |            `list[str]` |                                `[]` | Package-relative directories forced to be treated as flat packages. |
-| `private_names_by_dir`    | `dict[str, list[str]]` |                                `{}` | Public-name blocklist by package-relative directory.                |
-| `private_names_by_module` | `dict[str, list[str]]` |                                `{}` | Public-name blocklist by package-relative module path.              |
-| `ignored_dir_names`       |            `list[str]` |              Built-in ignored names | Directory names ignored during package and test discovery.          |
+`generated_marker` is only the human-readable notice. Generated-file identity
+is managed separately through the sentinel and registry.
 
 ---
 
-## Discovery modes
+## Symbol discovery
 
-`py-init-tools` never imports your project modules. It parses them statically
-with Python's `ast` module.
+`py-init-tools` never imports target modules. It parses their source code with
+Python's `ast` module.
+
+Three discovery modes are available.
 
 ### `explicit_all`
 
-Only static module-level `__all__` declarations are used.
-
-Supported forms include:
+Only static module-level `__all__` declarations are used:
 
 ```python
-__all__ = ["A", "B"]
-__all__ = ("A", "B")
-__all__: list[str] = ["A", "B"]
-__all__: tuple[str, ...] = ("A", "B")
+__all__ = ["ApiClient", "ApiResponse"]
 ```
+
+Lists, tuples, regular assignments, and annotated assignments are supported.
 
 ### `classes_functions`
 
 This is the default mode.
 
-The tool uses `__all__` if present. Otherwise, it discovers public top-level
-classes and functions:
+An explicit `__all__` takes priority. Otherwise, public top-level classes and
+functions are discovered:
 
 ```python
-class PublicClass:
+class ApiClient:
     pass
 
-def public_function() -> None:
-    pass
 
-class _PrivateClass:
+def create_client() -> ApiClient:
+    return ApiClient()
+
+
+class _InternalClient:
     pass
 ```
 
-Only `PublicClass` and `public_function` are exported.
+Here, `ApiClient` and `create_client` are public. `_InternalClient` is ignored.
 
 ### `all_public`
 
-This mode can additionally export public constants and type aliases when enabled:
+This mode can additionally export constants and type aliases:
 
 ```toml
+[tool.py-init-tools]
 discovery_mode = "all_public"
 export_constants = true
 export_type_aliases = true
 ```
 
-Example discoverable symbols in this mode:
-
 ```python
 from typing import TypeAlias
 
-PublicAlias: TypeAlias = str
-PUBLIC_CONSTANT = "value"
-
-class PublicClass:
-    pass
-
-def public_function() -> None:
-    pass
+ClientName: TypeAlias = str
+DEFAULT_TIMEOUT = 30
 ```
 
 ---
 
-## Private-name filtering
+## Re-exports
 
-Some public-looking names may still be internal from your project's perspective.
-You can exclude them by package-relative directory or by package-relative module.
-
-### By directory
-
-```toml
-[tool.py-init-tools.private_names_by_dir]
-"trajectory/smm" = [
-  "TrajectoryOptimizer",
-  "TrajectoryPlanner"
-]
-```
-
-### By module
-
-```toml
-[tool.py-init-tools.private_names_by_module]
-"api/client.py" = [
-  "InternalClient",
-  "LegacyApiClient"
-]
-```
-
-These names are removed from generated re-exports and `__all__`.
-
----
-
-## Manual file protection
-
-Existing `__init__.py` files are protected by default.
-
-A file is considered generated only if it contains the configured marker:
-
-```python
-Auto-generated by py-init-tools
-```
-
-If an existing `__init__.py` does not contain this marker, it is treated as
-manual and will not be overwritten unless `--overwrite-manual` is passed.
-
----
-
-## Generated lightweight initializer
-
-For packages not listed in `reexport_allowlist`, `py-init-tools` generates
-lightweight initializers without eager imports:
-
-```python
-# my_package/subpkg/__init__.py
-"""Lightweight initializer for the subpkg package.
-
-This file intentionally avoids eager public re-exports to prevent circular
-imports and expensive import side effects.
-
-Auto-generated by py-init-tools — do not edit manually.
-"""
-
-from __future__ import annotations
-
-# No eager public re-exports
-
-__all__ = [
-]
-```
-
----
-
-## Generated re-export initializer
-
-For allowlisted packages, public symbols can be re-exported:
+Eager public re-exports are disabled unless a package is explicitly allowlisted:
 
 ```toml
 [tool.py-init-tools]
 reexport_allowlist = ["api"]
 ```
 
-Example generated file:
+A generated initializer may then contain:
 
 ```python
-# my_package/api/__init__.py
-"""Public re-exports for the api package.
-
-Auto-generated by py-init-tools — do not edit manually.
-"""
-
-from __future__ import annotations
-
 from .client import ApiClient
 from .models import ApiResponse
 
@@ -334,187 +238,237 @@ __all__ = [
 ]
 ```
 
----
+Packages outside the allowlist receive lightweight initializers without eager
+imports. This helps avoid circular imports and import-time side effects.
 
-## Root package re-exports
-
-Root package re-exports are disabled by default.
-
-This keeps the top-level package lightweight and avoids importing submodules
-during package import.
-
-To enable root-level public re-exports:
+Root re-exports are controlled separately:
 
 ```toml
 [tool.py-init-tools]
 generate_root_reexports = true
 ```
 
-When disabled, the root initializer stays lightweight:
+They are disabled by default.
 
-```python
-# my_package/__init__.py
-"""My Python package.
+---
 
-Auto-generated by py-init-tools — do not edit manually.
-"""
+## Excluding public-looking names
 
-from __future__ import annotations
+Names that look public but belong to the internal API can be excluded.
 
-# Root re-exports are disabled by configuration
+### By directory
 
-__all__ = [
+```toml
+[tool.py-init-tools.private_names_by_dir]
+"services/internal" = [
+  "InternalClient",
+  "LegacyService"
 ]
 ```
 
-If `package_version` is configured, the root package also contains
-`__version__`:
+### By module
+
+```toml
+[tool.py-init-tools.private_names_by_module]
+"api/client.py" = [
+  "InternalClient"
+]
+```
+
+Paths are relative to the configured package root.
+
+---
+
+## Generated-file tracking
+
+Each generated file starts with a technical sentinel:
 
 ```python
-__version__ = "0.2.2"
+# @generated py-init-tools format=1 id=... version=1 revision=1
+```
+
+The remaining docstring contains a human-readable notice and the project URL:
+
+```python
+"""My Python package.
+
+Generated by py-init-tools — do not edit manually.
+Source: https://gitlab.com/dev-tools-cr/python/py-init-tools
+"""
+```
+
+The sentinel is checked against:
+
+```text
+.py-init-tools/state.json
+```
+
+The registry stores:
+
+- the generated file's UUID;
+- its project-relative path;
+- its version and revision;
+- a SHA-256 hash of its generated body;
+- creation and update dates;
+- a short generation history.
+
+The registry contains no secret and uses only JSON. It should normally be
+committed alongside the generated files:
+
+```bash
+git add .py-init-tools/state.json
+```
+
+Temporary registry files can be ignored:
+
+```gitignore
+.py-init-tools/*.tmp
+```
+
+### Versions and revisions
+
+- **Version** identifies an incarnation of a file.
+- **Revision** identifies a content change within that incarnation.
+- The version increases when a tracked file is deleted and recreated.
+- The revision increases when its generated content changes or is repaired.
+- Running the tool without any content change increments neither value.
+
+Examples:
+
+| **Event**                              | **Result**            |
+| -------------------------------------- | --------------------- |
+| First generation                       | version 1, revision 1 |
+| Generated content changes              | version 1, revision 2 |
+| File is manually modified and repaired | version 1, revision 3 |
+| File is deleted and regenerated        | version 2, revision 1 |
+| Nothing changes                        | no increment          |
+
+The sentinel format version is independent from the generated file's version
+and revision.
+
+---
+
+## Manual file protection
+
+A file is accepted as generated only when:
+
+1. its sentinel has the expected format;
+2. its path exists in the registry;
+3. its UUID, version, and revision match the registry;
+4. its body matches the registered SHA-256 hash.
+
+A random UUID or copied sentinel is therefore not enough to make a file appear
+valid.
+
+Files without a valid generated identity are not overwritten unless
+`--overwrite-manual` is passed.
+
+For the initial migration from older generated files, run:
+
+```bash
+pyinit --write --overwrite-manual
+```
+
+After migration, regular updates only require:
+
+```bash
+pyinit --write
 ```
 
 ---
 
 ## Test package markers
 
-When test roots are configured, the tool can generate minimal package markers:
+Configured test roots receive minimal package markers:
 
 ```python
+# @generated py-init-tools format=1 id=... version=1 revision=1
 # tests/unit/__init__.py
 # Package marker — do not add imports here.
-# Auto-generated by py-init-tools — do not edit manually.
+# Generated by py-init-tools — do not edit manually.
+# Source: https://gitlab.com/dev-tools-cr/python/py-init-tools
 ```
 
 These files intentionally contain no imports.
 
----
-
-## Example: configuration for a large project
-
-```toml
-[tool.py-init-tools]
-package_roots = ["magellan"]
-test_roots = ["tests"]
-
-package_version = "2.0.0"
-package_description = "MAGELLA²N package."
-
-generate_root_reexports = false
-
-reexport_allowlist = [
-  "trajectory/common",
-  "trajectory/ik",
-  "trajectory/smm"
-]
-
-discovery_mode = "classes_functions"
-export_constants = false
-export_type_aliases = false
-flat_subdirs = []
-
-[tool.py-init-tools.private_names_by_dir]
-"trajectory/smm" = [
-  "TrajectoryOptimizer",
-  "TrajectoryPlanner"
-]
-```
-
-Then run:
-
-```bash
-pyinit --check
-```
-
-or:
-
-```bash
-pyinit --write
-```
+Use `--skip-tests` to disable their generation for one command.
 
 ---
 
 ## Recommended workflow
 
-### During development
+During development:
 
 ```bash
 pyinit
 ```
 
-Review the dry-run output.
-
-Then write files:
+Review the dry-run, then apply it:
 
 ```bash
 pyinit --write
 ```
 
-### In CI
+Before committing:
 
 ```bash
 pyinit --check
 ```
 
-If your project intentionally keeps some manual `__init__.py` files:
+Commit both the generated files and their registry:
 
 ```bash
-pyinit --check --ignore-manual-in-check
+git add .py-init-tools/state.json
+git add --all
+```
+
+In CI:
+
+```bash
+pyinit --check
 ```
 
 ---
 
 ## Development
 
-This project uses Pixi for the development environment and task execution.
+This project uses Pixi for its development environment and task execution.
 
-### Run all checks
+Run all checks:
 
 ```bash
 pixi run check
 ```
 
-This runs:
-
-- Ruff linting;
-- BasedPyright strict type checking;
-- Pytest.
-
-### Run tests
+Run the tests:
 
 ```bash
 pixi run pytest
 ```
 
-### Run tests with coverage
+Run tests with coverage:
 
 ```bash
 pixi run pytest --cov=py_init_tools --cov-branch
 ```
 
-Coverage is targeted at the `py_init_tools` package only.
+The quality checks include:
 
-### Quality status
-
-The test suite covers the main functional layers:
-
-- CLI parsing and execution flow;
-- configuration loading;
-- filesystem and AST discovery;
-- generated `__init__.py` rendering;
-- file writing and checking safeguards.
-
-Current package coverage is approximately 95%.
+- Ruff linting and formatting;
+- BasedPyright strict type checking;
+- Pytest.
 
 ---
 
 ## Design principles
 
-- **Safe by default**: no writes unless explicitly requested.
-- **No runtime imports**: target modules are parsed statically.
-- **Manual files are protected**: generated files are identified by a marker.
+- **Safe by default**: no writes without `--write`.
+- **Static analysis only**: target project modules are never imported.
+- **Manual files are protected**: overwriting requires an explicit option.
+- **Deterministic generation**: unchanged inputs produce unchanged files.
 - **Explicit API exposure**: eager re-exports are allowlisted.
-- **Project-independent**: configuration lives in the consuming project.
+- **Transparent tracking**: generated metadata is stored as readable JSON.
+- **Lightweight implementation**: no database, secret, or external runtime dependency.
 
 ---
 
