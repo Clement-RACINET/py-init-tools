@@ -17,6 +17,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Literal, cast
 
 from py_init_tools.constants import (
+    DEFAULT_SENTINEL_SEARCH_LINES,
     REGISTRY_DIR_NAME,
     REGISTRY_FILE_NAME,
     REGISTRY_FORMAT_VERSION,
@@ -144,20 +145,8 @@ def format_sentinel(record: FileRecord) -> str:
     )
 
 
-def compose_generated_content(record: FileRecord, body: str) -> str:
-    """Combine a generated-file sentinel with its body."""
-    return f"{format_sentinel(record)}\n{body}"
-
-
-def parse_sentinel(content: str) -> Sentinel | None:
-    """Parse a generated-file sentinel from the first line."""
-    first_line, _separator, _body = content.partition("\n")
-    normalized_line = first_line.rstrip("\r")
-    match = SENTINEL_PATTERN.fullmatch(normalized_line)
-
-    if match is None:
-        return None
-
+def _sentinel_from_match(match: re.Match[str]) -> Sentinel:
+    """Build sentinel metadata from a regular-expression match."""
     return Sentinel(
         file_id=match.group("file_id"),
         version=int(match.group("version")),
@@ -165,17 +154,93 @@ def parse_sentinel(content: str) -> Sentinel | None:
     )
 
 
-def extract_body(content: str) -> str | None:
-    """Return the body following a valid generated-file sentinel."""
-    if parse_sentinel(content) is None:
+def _locate_sentinel(
+    content: str,
+    *,
+    max_lines: int = DEFAULT_SENTINEL_SEARCH_LINES,
+) -> tuple[Sentinel, int, int] | None:
+    """Locate a generated-file sentinel near the start of a file.
+
+    Returns:
+        A tuple containing the parsed sentinel, the sentinel's start offset,
+        and the body's start offset. Returns None when no sentinel is found.
+
+    """
+    if max_lines < 1:
+        message = "max_lines must be a positive integer."
+        raise ValueError(message)
+
+    offset = 0
+    lines = content.splitlines(keepends=True)
+
+    for line in lines[:max_lines]:
+        normalized_line = line.rstrip("\r\n")
+        match = SENTINEL_PATTERN.fullmatch(normalized_line)
+        line_end = offset + len(line)
+
+        if match is not None:
+            return _sentinel_from_match(match), offset, line_end
+
+        offset = line_end
+
+    return None
+
+
+def compose_generated_content(
+    record: FileRecord,
+    body: str,
+    *,
+    existing_content: str | None = None,
+    sentinel_search_lines: int = DEFAULT_SENTINEL_SEARCH_LINES,
+) -> str:
+    """Combine a generated-file sentinel with its body.
+
+    Existing lines before a valid sentinel are preserved. This allows SPDX
+    headers and other file metadata to remain above the generated sentinel.
+    """
+    preamble = ""
+
+    if existing_content is not None:
+        located = _locate_sentinel(
+            existing_content,
+            max_lines=sentinel_search_lines,
+        )
+
+        if located is not None:
+            _sentinel, sentinel_start, _body_start = located
+            preamble = existing_content[:sentinel_start]
+
+    return f"{preamble}{format_sentinel(record)}\n{body}"
+
+
+def parse_sentinel(
+    content: str,
+    *,
+    max_lines: int = DEFAULT_SENTINEL_SEARCH_LINES,
+) -> Sentinel | None:
+    """Parse a generated-file sentinel near the start of a file."""
+    located = _locate_sentinel(content, max_lines=max_lines)
+
+    if located is None:
         return None
 
-    _first_line, separator, body = content.partition("\n")
+    sentinel, _sentinel_start, _body_start = located
+    return sentinel
 
-    if not separator:
-        return ""
 
-    return body
+def extract_body(
+    content: str,
+    *,
+    max_lines: int = DEFAULT_SENTINEL_SEARCH_LINES,
+) -> str | None:
+    """Return the body following a valid generated-file sentinel."""
+    located = _locate_sentinel(content, max_lines=max_lines)
+
+    if located is None:
+        return None
+
+    _sentinel, _sentinel_start, body_start = located
+    return content[body_start:]
 
 
 def empty_registry() -> Registry:
@@ -418,9 +483,13 @@ def validate_generated_content(
     *,
     relative_path: str,
     content: str,
+    sentinel_search_lines: int = DEFAULT_SENTINEL_SEARCH_LINES,
 ) -> GeneratedStatus:
     """Validate generated content against the project registry."""
-    sentinel = parse_sentinel(content)
+    sentinel = parse_sentinel(
+        content,
+        max_lines=sentinel_search_lines,
+    )
     status = GeneratedStatus.VALID
 
     if sentinel is None:
@@ -437,7 +506,10 @@ def validate_generated_content(
         elif sentinel.revision != record.revision:
             status = GeneratedStatus.REVISION_MISMATCH
         else:
-            body = extract_body(content)
+            body = extract_body(
+                content,
+                max_lines=sentinel_search_lines,
+            )
 
             if body is None or body_sha256(body) != record.body_sha256:
                 status = GeneratedStatus.MODIFIED

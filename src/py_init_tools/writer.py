@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from py_init_tools.constants import DEFAULT_SENTINEL_SEARCH_LINES
 from py_init_tools.registry import (
     GeneratedStatus,
     Registry,
@@ -31,6 +32,7 @@ def is_generated_file(
     *,
     project_root: Path,
     path: Path,
+    sentinel_search_lines: int = DEFAULT_SENTINEL_SEARCH_LINES,
 ) -> bool:
     """Return whether a file is valid according to the registry."""
     if not path.is_file():
@@ -42,6 +44,7 @@ def is_generated_file(
         registry,
         relative_path=relative_path,
         content=content,
+        sentinel_search_lines=sentinel_search_lines,
     )
 
     return status is GeneratedStatus.VALID
@@ -64,19 +67,26 @@ def _write_file(
     dry_run: bool,
     overwrite_manual: bool,
 ) -> tuple[bool, bool]:
-    """Write one generated file and update its registry record."""
+    """Write one generated file and update its registry record.
+
+    Returns:
+        A tuple containing the operation success and whether the registry
+        changed.
+
+    """
     path = generated_file.path
     body = generated_file.content
     relative_path = path.relative_to(cfg.project_root).as_posix()
-    existed_before = path.exists()
-
+    existing_content: str | None = None
     recreate = False
     repair = False
-    existing_content: str | None = None
 
-    if existed_before:
+    if path.exists():
         existing_content = path.read_text(encoding="utf-8")
-        sentinel = parse_sentinel(existing_content)
+        sentinel = parse_sentinel(
+            existing_content,
+            max_lines=cfg.sentinel_search_lines,
+        )
 
         if sentinel is None:
             if not overwrite_manual:
@@ -89,6 +99,7 @@ def _write_file(
                 registry,
                 relative_path=relative_path,
                 content=existing_content,
+                sentinel_search_lines=cfg.sentinel_search_lines,
             )
 
             if status is GeneratedStatus.MODIFIED:
@@ -109,33 +120,28 @@ def _write_file(
         recreate=recreate,
         repair=repair,
     )
+
     complete_content = compose_generated_content(
         generation.record,
         body,
+        existing_content=existing_content,
+        sentinel_search_lines=cfg.sentinel_search_lines,
     )
+
+    if existing_content == complete_content:
+        print(f"  [UNCHANGED] {relative_path}")
+        return True, False
 
     if dry_run:
         print(f"\n{'=' * 80}")
         print(f"[DRY-RUN] Would write: {relative_path}")
         print(f"{'=' * 80}")
         print(complete_content)
-
-        # Le registre n'est jamais sauvegardé en dry-run.
         return True, False
-
-    if existing_content == complete_content:
-        print(f"  [UNCHANGED] {relative_path}")
-        return True, generation.changed
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(complete_content, encoding="utf-8")
-
-    status_label = "UPDATED" if existed_before else "NEW"
-    print(
-        f"  [{status_label}] {relative_path} "
-        f"(v{generation.record.version}, "
-        f"r{generation.record.revision})"
-    )
+    print(f"  [WRITE] {relative_path}")
 
     return True, generation.changed
 
@@ -188,7 +194,10 @@ def _check_file(
         return False
 
     actual_content = path.read_text(encoding="utf-8")
-    sentinel = parse_sentinel(actual_content)
+    sentinel = parse_sentinel(
+        actual_content,
+        max_lines=cfg.sentinel_search_lines,
+    )
 
     if sentinel is None:
         if ignore_manual:
@@ -202,13 +211,17 @@ def _check_file(
         registry,
         relative_path=relative_path,
         content=actual_content,
+        sentinel_search_lines=cfg.sentinel_search_lines,
     )
 
     if status is not GeneratedStatus.VALID:
         _print_invalid_generated_status(relative_path, status)
         return False
 
-    actual_body = extract_body(actual_content)
+    actual_body = extract_body(
+        actual_content,
+        max_lines=cfg.sentinel_search_lines,
+    )
 
     if actual_body != generated_file.content:
         print(f"  [OUTDATED] {relative_path}")

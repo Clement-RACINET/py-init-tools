@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from py_init_tools.constants import (
     DEFAULT_GENERATED_MARKER,
     DEFAULT_PACKAGE_DESCRIPTION,
+    DEFAULT_SENTINEL_SEARCH_LINES,
 )
 from py_init_tools.models import InitToolConfig
 
@@ -68,6 +69,14 @@ def _as_bool(value: object, *, default: bool) -> bool:
     return default
 
 
+def _as_positive_int(value: object, *, default: int) -> int:
+    """Return a positive integer configuration value."""
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value
+
+    return default
+
+
 def _as_str_list(value: object, *, default: tuple[str, ...] = ()) -> tuple[str, ...]:
     """Return a tuple of strings from a config value."""
     if not isinstance(value, list):
@@ -80,12 +89,14 @@ def _as_str_list(value: object, *, default: tuple[str, ...] = ()) -> tuple[str, 
 
 def _as_discovery_mode(value: object) -> DiscoveryMode:
     """Return a valid discovery mode."""
-    valid_modes: frozenset[DiscoveryMode] = frozenset(
-        {"explicit_all", "classes_functions", "all_public"}
-    )
+    valid_modes = {
+        "explicit_all",
+        "classes_functions",
+        "all_public",
+    }
 
-    if value in valid_modes:
-        return value
+    if isinstance(value, str) and value in valid_modes:
+        return cast("DiscoveryMode", value)
 
     return DEFAULT_DISCOVERY_MODE
 
@@ -172,60 +183,67 @@ def _ignored_dir_names(raw_config: Mapping[str, object]) -> frozenset[str]:
 
 
 def load_config(
-    *,
     cwd: Path,
-    package_roots: tuple[str, ...],
-    test_roots: tuple[str, ...],
+    *,
+    package_roots: tuple[str, ...] = (),
+    test_roots: tuple[str, ...] = (),
 ) -> InitToolConfig:
-    """Load py-init-tools configuration from pyproject.toml and CLI overrides."""
+    """Load configuration from pyproject.toml and CLI overrides."""
     project_root = cwd.resolve()
-    pyproject_path = project_root / "pyproject.toml"
-
-    pyproject_data = _load_pyproject_data(pyproject_path)
+    pyproject_data = _load_pyproject_data(
+        project_root / "pyproject.toml",
+    )
     raw_config = _get_tool_table(pyproject_data)
 
     configured_package_roots = _as_str_list(
         raw_config.get("package_roots"),
-        default=("src/py_init_tools",),
     )
     configured_test_roots = _as_str_list(
         raw_config.get("test_roots"),
-        default=("tests",),
     )
 
     resolved_package_roots = _configured_paths(
         cwd=project_root,
         cli_paths=package_roots,
         config_paths=configured_package_roots,
-        default_paths=("src/py_init_tools",),
+        default_paths=("src",),
     )
     resolved_test_roots = _configured_paths(
         cwd=project_root,
         cli_paths=test_roots,
         config_paths=configured_test_roots,
-        default_paths=("tests",),
+        default_paths=(),
     )
 
     return InitToolConfig(
         project_root=project_root,
         package_roots=resolved_package_roots,
         test_roots=resolved_test_roots,
+        package_version=_as_optional_str(
+            raw_config.get("package_version"),
+        ),
+        package_description=_as_str(
+            raw_config.get("package_description"),
+            default=DEFAULT_PACKAGE_DESCRIPTION,
+        ),
         generated_marker=_as_str(
             raw_config.get("generated_marker"),
             default=DEFAULT_GENERATED_MARKER,
         ),
-        package_version=_as_optional_str(raw_config.get("package_version")),
-        package_description=_as_str(
-            raw_config.get("package_description"),
-            default=DEFAULT_PACKAGE_DESCRIPTION,
+        sentinel_search_lines=_as_positive_int(
+            raw_config.get("sentinel_search_lines"),
+            default=DEFAULT_SENTINEL_SEARCH_LINES,
         ),
         generate_root_reexports=_as_bool(
             raw_config.get("generate_root_reexports"),
             default=False,
         ),
-        reexport_allowlist=_as_str_set(raw_config.get("reexport_allowlist")),
-        flat_subdirs=_as_str_set(raw_config.get("flat_subdirs")),
-        discovery_mode=_as_discovery_mode(raw_config.get("discovery_mode")),
+        reexport_allowlist=_as_str_set(
+            raw_config.get("reexport_allowlist"),
+        ),
+        discovery_mode=_as_discovery_mode(
+            raw_config.get("discovery_mode"),
+        ),
         export_constants=_as_bool(
             raw_config.get("export_constants"),
             default=False,
@@ -234,11 +252,14 @@ def load_config(
             raw_config.get("export_type_aliases"),
             default=False,
         ),
-        ignored_dir_names=_ignored_dir_names(raw_config),
-        private_names_by_module=_as_str_map(
-            raw_config.get("private_names_by_module"),
+        flat_subdirs=_as_str_set(
+            raw_config.get("flat_subdirs"),
         ),
         private_names_by_dir=_as_str_map(
             raw_config.get("private_names_by_dir"),
         ),
+        private_names_by_module=_as_str_map(
+            raw_config.get("private_names_by_module"),
+        ),
+        ignored_dir_names=_ignored_dir_names(raw_config),
     )

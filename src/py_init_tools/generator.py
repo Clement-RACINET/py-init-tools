@@ -346,6 +346,7 @@ def gen_test_init(cfg: InitToolConfig, directory: Path) -> str:
 {commented_notice}
 """
 
+
 def generate_package_files_for_root(
     cfg: InitToolConfig,
     pkg_root: Path,

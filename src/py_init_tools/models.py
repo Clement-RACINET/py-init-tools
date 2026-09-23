@@ -9,7 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
-from py_init_tools.constants import DEFAULT_GENERATED_MARKER
+from py_init_tools.constants import (
+    DEFAULT_GENERATED_MARKER,
+    DEFAULT_SENTINEL_SEARCH_LINES,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -44,50 +47,42 @@ class InitToolConfig:
         package_roots: Python package root directories.
         test_roots: Test root directories.
         package_version: Optional package version written in root packages.
-        package_description: Description used in root package docstrings.
-        generated_marker: Stable marker used to identify generated files.
-        generate_root_reexports: Whether root packages can re-export public names.
-        reexport_allowlist: Package directories allowed to receive eager re-exports.
-        discovery_mode: Public symbol discovery strategy.
-        export_constants: Whether constants can be exported in all_public mode.
-        export_type_aliases: Whether TypeAlias declarations can be exported.
-        private_names_by_dir: Public-name blocklist by package-relative directory.
-        private_names_by_module: Public-name blocklist by package-relative module path.
-        flat_subdirs: Package directories forced to be treated as flat packages.
-        ignored_dir_names: Directory names ignored during scanning.
+        package_description: Root package docstring description.
+        generated_marker: Human-readable generated-file marker.
+        sentinel_search_lines: Number of initial lines searched for a sentinel.
+        generate_root_reexports: Whether root packages may re-export names.
+        reexport_allowlist: Package-relative directories allowed to re-export.
+        discovery_mode: Public-symbol discovery strategy.
+        export_constants: Whether public constants can be exported.
+        export_type_aliases: Whether public type aliases can be exported.
+        flat_subdirs: Directories forced to behave as flat packages.
+        private_names_by_dir: Public-name exclusions by directory.
+        private_names_by_module: Public-name exclusions by module.
+        ignored_dir_names: Directory names ignored during discovery.
 
     """
 
     project_root: Path
     package_roots: tuple[Path, ...]
-    test_roots: tuple[Path, ...] = ()
+    test_roots: tuple[Path, ...]
 
     package_version: str | None = None
     package_description: str = "Python package."
     generated_marker: str = DEFAULT_GENERATED_MARKER
+    sentinel_search_lines: int = DEFAULT_SENTINEL_SEARCH_LINES
 
     generate_root_reexports: bool = False
-    reexport_allowlist: frozenset[str] = frozenset()
-    discovery_mode: DiscoveryMode = "classes_functions"
+    reexport_allowlist: frozenset[str] = field(default_factory=frozenset)
 
+    discovery_mode: DiscoveryMode = "classes_functions"
     export_constants: bool = False
     export_type_aliases: bool = False
 
-    private_names_by_dir: dict[str, frozenset[str]] = field(default_factory=dict)
-    private_names_by_module: dict[str, frozenset[str]] = field(default_factory=dict)
-    flat_subdirs: frozenset[str] = frozenset()
-
-    ignored_dir_names: frozenset[str] = frozenset(
-        {
-            "__pycache__",
-            ".git",
-            ".hg",
-            ".mypy_cache",
-            ".pytest_cache",
-            ".ruff_cache",
-            ".venv",
-            "venv",
-            "build",
-            "dist",
-        }
+    flat_subdirs: frozenset[str] = field(default_factory=frozenset)
+    private_names_by_dir: dict[str, frozenset[str]] = field(
+        default_factory=dict,
     )
+    private_names_by_module: dict[str, frozenset[str]] = field(
+        default_factory=dict,
+    )
+    ignored_dir_names: frozenset[str] = field(default_factory=frozenset)
