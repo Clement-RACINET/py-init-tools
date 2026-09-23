@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from py_init_tools.constants import generated_notice
 from py_init_tools.discovery import (
     blocklist_for_module,
     collect_public_names,
@@ -126,12 +127,13 @@ def render_init_file(spec: InitRenderSpec) -> str:
 
     all_block = format_all(spec.all_names)
     formatted_all = f"\n    {all_block}\n" if all_block else "\n"
+    notice = generated_notice(spec.generated_marker)
 
     return f'''\
 {spec.path_comment}
 """{spec.docstring}
 
-{spec.generated_marker} — do not edit manually.
+{notice}
 """
 
 from __future__ import annotations
@@ -332,13 +334,14 @@ def gen_package_init(cfg: InitToolConfig, pkg_root: Path) -> str:
 def gen_test_init(cfg: InitToolConfig, directory: Path) -> str:
     """Generate a minimal test package marker."""
     rel = directory.relative_to(cfg.project_root).as_posix()
+    notice = generated_notice(cfg.generated_marker)
+    commented_notice = "\n".join(f"# {line}" for line in notice.splitlines())
 
     return f"""\
 # {rel}/__init__.py
 # Package marker — do not add imports here.
-# {cfg.generated_marker} — do not edit manually.
+{commented_notice}
 """
-
 
 def generate_package_files_for_root(
     cfg: InitToolConfig,

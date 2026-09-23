@@ -19,7 +19,9 @@ ruff-check = "ruff check src tests"
 ruff-fix = "ruff check src tests --fix"
 ruff-format = "ruff format src tests"
 typecheck = "basedpyright"
-test = "pytest"
+
+pytest = "pytest"
+
 
 check = { depends-on = ["ruff-check", "typecheck", "test"] }
 format = { depends-on = ["ruff-fix", "ruff-format"] }
