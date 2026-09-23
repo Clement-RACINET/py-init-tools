@@ -1,4 +1,7 @@
-# Copyright (c) 2026 Clément RACINET
+# Copyright (C) 2026 Clément RACINET
+# SPDX-FileCopyrightText: 2026 Clément RACINET
+#
+# SPDX-License-Identifier: X11
 """File writing and checking helpers."""
 
 from __future__ import annotations

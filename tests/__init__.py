@@ -1,1 +1,4 @@
-# Copyright (c) 2026 Clément RACINET
+# Copyright (C) 2026 Clément RACINET
+# SPDX-FileCopyrightText: 2026 Clément RACINET
+#
+# SPDX-License-Identifier: X11

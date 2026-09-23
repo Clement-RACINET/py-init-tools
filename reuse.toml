@@ -1,0 +1,17 @@
+version = 1
+
+[[annotations]]
+path = [
+  ".coveragerc",
+  ".gitignore",
+  ".gitlab-ci.yml",
+  ".pre-commit-config.yaml",
+  "README.md",
+  "basedpyrightconfig.json",
+  "pixi.lock",
+  "pyproject.toml",
+  "ruff.toml",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Clément RACINET"
+SPDX-License-Identifier = "X11"

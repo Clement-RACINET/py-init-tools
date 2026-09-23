@@ -1,4 +1,7 @@
-# Copyright (c) 2026 Clément RACINET
+# Copyright (C) 2026 Clément RACINET
+# SPDX-FileCopyrightText: 2026 Clément RACINET
+#
+# SPDX-License-Identifier: X11
 """Tests for the command-line interface."""
 
 from __future__ import annotations

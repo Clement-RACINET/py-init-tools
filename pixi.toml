@@ -5,6 +5,7 @@ platforms = ["win-64", "linux-64"]
 [dependencies]
 python = ">=3.12,<3.14"
 pip = "*"
+reuse = ">=6.2.0,<7"
 
 [pypi-dependencies]
 py-init-tools = { path = ".", editable = true }
