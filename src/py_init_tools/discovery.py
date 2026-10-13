@@ -71,31 +71,6 @@ def extract_static_string_sequence(node: ast.AST) -> list[str] | None:
     return names
 
 
-def extract_all_from_node(node: ast.AST) -> list[str] | None:
-    """Extract a static top-level __all__ declaration."""
-    if isinstance(node, ast.Assign):
-        is_all_assignment = any(
-            isinstance(target, ast.Name) and target.id == "__all__"
-            for target in node.targets
-        )
-
-        if not is_all_assignment:
-            return None
-
-        return extract_static_string_sequence(node.value)
-
-    if isinstance(node, ast.AnnAssign):
-        if not isinstance(node.target, ast.Name) or node.target.id != "__all__":
-            return None
-
-        if node.value is None:
-            return None
-
-        return extract_static_string_sequence(node.value)
-
-    return None
-
-
 def is_type_alias_assignment(node: ast.AnnAssign) -> bool:
     """Return whether an annotated assignment declares a TypeAlias."""
     annotation = node.annotation
@@ -147,18 +122,118 @@ def _parse_python_module(py_file: Path) -> ast.Module | None:
         return None
 
 
+def _extract_all_value(node: ast.AST) -> list[str] | None:
+    """Extract strings from a list, tuple or concatenation of those."""
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _extract_all_value(node.left)
+        right = _extract_all_value(node.right)
+
+        if left is None or right is None:
+            return None
+
+        return [*left, *right]
+
+    return extract_static_string_sequence(node)
+
+
+def _is_all_name(node: ast.AST) -> bool:
+    """Return whether a node is the name __all__."""
+    return isinstance(node, ast.Name) and node.id == "__all__"
+
+
+def _extract_all_mutation(node: ast.AST) -> list[str] | None:
+    """Extract names from __all__.extend([...]) or __all__.append("x")."""
+    if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+        return None
+
+    func = node.value.func
+
+    if not isinstance(func, ast.Attribute) or not _is_all_name(func.value):
+        return None
+
+    if len(node.value.args) != 1:
+        return None
+
+    argument = node.value.args[0]
+
+    if func.attr == "extend":
+        return _extract_all_value(argument)
+
+    if (
+        func.attr == "append"
+        and isinstance(argument, ast.Constant)
+        and isinstance(argument.value, str)
+    ):
+        return [argument.value]
+
+    return None
+
+
+def extract_all_from_node(node: ast.AST) -> list[str] | None:
+    """Extract a static top-level __all__ assignment."""
+    if isinstance(node, ast.Assign):
+        if not any(_is_all_name(target) for target in node.targets):
+            return None
+
+        return _extract_all_value(node.value)
+
+    if isinstance(node, ast.AnnAssign):
+        if not _is_all_name(node.target) or node.value is None:
+            return None
+
+        return _extract_all_value(node.value)
+
+    return None
+
+
+def _iter_toplevel_nodes(body: list[ast.stmt]) -> list[ast.stmt]:
+    """Flatten top-level statements, including if/try blocks."""
+    result: list[ast.stmt] = []
+
+    for node in body:
+        result.append(node)
+
+        if isinstance(node, ast.If):
+            result.extend(_iter_toplevel_nodes(node.body))
+            result.extend(_iter_toplevel_nodes(node.orelse))
+        elif isinstance(node, ast.Try):
+            result.extend(_iter_toplevel_nodes(node.body))
+
+    return result
+
+
 def _collect_explicit_all(
     tree: ast.Module,
     blocklist: frozenset[str],
 ) -> list[str] | None:
-    """Collect names from an explicit static __all__ declaration."""
-    for node in tree.body:
-        explicit_all = extract_all_from_node(node)
+    """Collect names from every static __all__ declaration of a module."""
+    names: list[str] | None = None
 
-        if explicit_all is not None:
-            return dedupe_names(explicit_all, blocklist)
+    for node in _iter_toplevel_nodes(tree.body):
+        if isinstance(node, ast.AugAssign):
+            if _is_all_name(node.target) and isinstance(node.op, ast.Add):
+                added = _extract_all_value(node.value)
 
-    return None
+                if added is not None:
+                    names = [*(names or []), *added]
+
+            continue
+
+        mutation = _extract_all_mutation(node)
+
+        if mutation is not None:
+            names = [*(names or []), *mutation]
+            continue
+
+        declared = extract_all_from_node(node)
+
+        if declared is not None:
+            names = declared
+
+    if names is None:
+        return None
+
+    return dedupe_names(names, blocklist)
 
 
 def _collect_definition_name(node: ast.AST) -> str | None:
