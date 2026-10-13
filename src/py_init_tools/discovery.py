@@ -30,8 +30,26 @@ def relative_module_key(pkg_root: Path, py_file: Path) -> str:
 
 
 def is_reexport_allowed(cfg: InitToolConfig, pkg_root: Path, pkg_dir: Path) -> bool:
-    """Return whether a package may receive generated eager re-exports."""
-    return relative_package_key(pkg_root, pkg_dir) in cfg.reexport_allowlist
+    """Return whether a package may receive generated eager re-exports.
+
+    An entry ending with "/*" allows the directory and all its descendants.
+    The entry "*" allows every package except the root.
+    """
+    key = relative_package_key(pkg_root, pkg_dir)
+
+    if key in cfg.reexport_allowlist:
+        return True
+
+    if key == ".":
+        return False
+
+    if "*" in cfg.reexport_allowlist:
+        return True
+
+    return any(
+        entry.endswith("/*") and (key == entry[:-2] or key.startswith(f"{entry[:-2]}/"))
+        for entry in cfg.reexport_allowlist
+    )
 
 
 def is_public_name(name: str) -> bool:
