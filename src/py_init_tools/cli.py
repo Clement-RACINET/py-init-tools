@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 from typing import cast
 
+from py_init_tools import __version__
 from py_init_tools.config import load_config
 from py_init_tools.generator import generate_files
 from py_init_tools.writer import apply_files, check_files
@@ -45,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
     parser.add_argument(
         "--package-root",
         action="append",

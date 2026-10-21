@@ -8,14 +8,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "py-init-tools"
-version = "0.2.2"
+version = "2026.10.22"
 description = "Safe audit and generation of Python package __init__.py files."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
   { name = "Clément RACINET" }
 ]
-license = { text = "MIT" }
+license = { text = "X11" }
 keywords = [
   "python",
   "package",
@@ -28,7 +28,6 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -61,18 +60,12 @@ ignore = [
   "T201",
 ]
 
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = [
-  "D",
-  "S101",
-]
 
 [tool.basedpyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 include = [
   "src",
-  "tests",
 ]
 exclude = [
   "**/__pycache__",
@@ -85,9 +78,7 @@ exclude = [
 
 [tool.py-init-tools]
 package_roots = ["src/py_init_tools"]
-test_roots = ["tests"]
 
-package_version = "0.2.2"
 package_description = "Python __init__.py management tools."
 
 generate_root_reexports = false
@@ -96,23 +87,3 @@ reexport_allowlist = []
 discovery_mode = "classes_functions"
 export_constants = false
 export_type_aliases = false
-
-
-[tool.coverage.run]
-branch = true
-source = ["py_init_tools"]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = false
-exclude_lines = [
-  "if TYPE_CHECKING:",
-  "pragma: no cover",
-  "raise NotImplementedError",
-]
-
-[tool.coverage.paths]
-source = [
-  "src/py_init_tools",
-  "*/site-packages/py_init_tools",
-]

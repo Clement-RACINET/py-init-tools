@@ -15,8 +15,6 @@ reuse = ">=6.2.0,<7"
 py-init-tools = { path = ".", editable = true }
 ruff = ">=0.16.1,<0.17"
 basedpyright = ">=1.39.9,<2"
-pytest = ">=9.1.1,<10"
-pytest-cov = ">=7.1.0, <8"
 hatchling = ">=1.25"
 
 [tasks]
@@ -25,11 +23,9 @@ ruff-fix = "ruff check src tests --fix"
 ruff-format = "ruff format src tests"
 typecheck = "basedpyright"
 
-pytest = "pytest"
-
 reuse-annotate-all = """reuse annotate --copyright "Clément RACINET" --license "X11" --year "2026" --recursive --skip-unrecognised . """
 
-check = { depends-on = ["ruff-check", "typecheck", "test"] }
+check = { depends-on = ["ruff-check", "typecheck"] }
 format = { depends-on = ["ruff-fix", "ruff-format"] }
 
 pyinit-help = "pyinit --help"
