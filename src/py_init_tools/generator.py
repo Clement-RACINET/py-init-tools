@@ -121,6 +121,18 @@ def format_all(names: list[str]) -> str:
     return "\n    ".join(f'"{name}",' for name in unique_names)
 
 
+def format_all_assignment(names: list[str]) -> str:
+    """Format the complete __all__ assignment in Ruff-formatted style."""
+    unique_names = sorted(set(names), key=ruff_all_name_sort_key)
+
+    if not unique_names:
+        return "__all__ = []"
+
+    items = "\n".join(f'    "{name}",' for name in unique_names)
+
+    return f"__all__ = [\n{items}\n]"
+
+
 def render_init_file(spec: InitRenderSpec) -> str:
     """Render a generated __init__.py file."""
     version_block = ""
@@ -128,8 +140,7 @@ def render_init_file(spec: InitRenderSpec) -> str:
     if spec.version is not None:
         version_block = f'\n__version__ = "{spec.version}"\n'
 
-    all_block = format_all(spec.all_names)
-    formatted_all = f"\n    {all_block}\n" if all_block else "\n"
+    all_assignment = format_all_assignment(spec.all_names)
     notice = generated_notice(spec.generated_marker)
 
     return f'''\
@@ -143,7 +154,7 @@ from __future__ import annotations
 
 {spec.imports_block}
 
-__all__ = [{formatted_all}]
+{all_assignment}
 {version_block}'''
 
 
